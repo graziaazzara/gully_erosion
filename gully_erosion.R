@@ -25,6 +25,7 @@ install.packages("splitstackshape")
 install.packages("earth")
 install.packages("caret")
 install.packages("pROC")
+install.packages("raster")
 
 library(whitebox)
 library(terra)
@@ -37,17 +38,18 @@ library(earth)
 library(caret) 
 library(pROC) 
 
-
-
 ###################################################################################################################
 # START OF THE SCRIPT
 ###################################################################################################################
 
 # Set working directory to your location
-wd <- ("D:/GRAZIA/PHD/TURKEY/R")
+wd <- ("D:/GRAZIA/script/TURKEY/R")
 setwd(wd)
 
-#### INPUT DATA PREPARATION ####
+#### DATASETS ####
+# Ensure the working directory contains the following files: 
+# the DEM, the Study Area vector, and the Gully vector.
+
 ##### Upload DEM #####
 # resampling 
 wbt_resample(
@@ -71,15 +73,16 @@ wbt_vector_polygons_to_raster(
   nodata = TRUE,                       # Enable NoData values for areas without polygons; default is 0.0 if not set
   cell_size = NULL,                    # Define the resolution of the raster; uses the base raster if not specified
   base = "./dem_4m.tif",               # Path to a base raster file for spatial reference and resolution
-  wd = NULL,                           # Change the working directory (optional)
-  verbose_mode = NULL,                 # Enable verbose output for debugging (optional)
-  compress_rasters = NULL,             # Option to compress the output raster file (optional)
-  command_only = FALSE                 # Set to TRUE to return the command as a string without running it
+  wd = NULL,                           
+  verbose_mode = NULL,                 
+  compress_rasters = NULL,            
+  command_only = FALSE                 
 )
 
 
 ##### Upload the vector of the Gullies #####
 # Convert the vector lines of gullies into a raster format
+# The attribute field to rasterize must have a value of 1 
 wbt_vector_lines_to_raster(
   input="./G0_linear.shp",            # Path to the input shapefile containing gully lines
   output="./G0.tif",                  # Path to save the output raster file
@@ -87,38 +90,38 @@ wbt_vector_lines_to_raster(
   nodata = TRUE,                      # Enable NoData values for cells with no corresponding vector data
   cell_size = NULL,                   # Specify the resolution of the raster; uses the base raster if not specified
   base = "./dem_4m.tif",              # Path to a base raster file for spatial reference and resolution
-  wd = NULL,                          # Change the working directory (optional)
-  verbose_mode = NULL,                # Enable verbose output for debugging (optional)
-  compress_rasters = NULL,            # Option to compress the output raster file (optional)
-  command_only = FALSE                # Set to TRUE to return the command as a string without running it
+  wd = NULL,                          
+  verbose_mode = NULL,                
+  compress_rasters = NULL,            
+  command_only = FALSE                
 )
 
 # Convert the gully raster into vector points
 wbt_raster_to_vector_points(
-  './G0.tif',                         # Path to the input raster file (gullies)
+  './G0.tif',                         # Path to the input raster file (G0)
   './G0.shp',                         # Path to save the output vector point shapefile
   wd = NULL,                          # Change the working directory (optional)
-  verbose_mode = NULL,                # Enable verbose output for debugging (optional)
-  compress_rasters = NULL,            # Option to compress the output shapefile (optional)
-  command_only = FALSE                # Set to TRUE to return the command as a string without executing it
+  verbose_mode = NULL,                
+  compress_rasters = NULL,            
+  command_only = FALSE                
 )
 
 
-#### DEM PRE-PROCESSING, CHANNELS EXTRACTIONS AND GULLY SNAPPING ####
-##### Fill depression - Wang & Liu #####
+##### DEM PRE-PROCESSING, CHANNELS EXTRACTIONS AND GULLY SNAPPING #####
+###### Fill depression - Wang & Liu ######
 wbt_fill_depressions_wang_and_liu(
-  dem='./dem4m.tif',                  # Path to the input DEM raster file
+  dem='./dem_4m.tif',                  # Path to the input DEM raster file
   output='/fill_wang.tif',            # Path to save the output DEM with depressions filled
   fix_flats = TRUE,                   # Optional flag indicating whether flat areas should have a small gradient applied 
   flat_increment = NULL,              # Specify the elevation increment for flat areas (optional, uses default if not set)
   wd = NULL,                          # Change the working directory (optional)
-  verbose_mode = NULL,                # Enable verbose output for debugging (optional)
-  compress_rasters = NULL,            # Option to compress the output raster file (optional)
-  command_only = FALSE                # Set to TRUE to return the command as a string without executing it
+  verbose_mode = NULL,                
+  compress_rasters = NULL,            
+  command_only = FALSE                
 )
 
 
-##### Extracting D8 Contributing Area #####
+###### Extracting D8 Contributing Area ######
 # Contributing Area (CA m²) represents the total upstream area contributing flow to a point. 
 # Calculate the D8 contributing area (CA) from the input DEM
 wbt_d8_flow_accumulation(
@@ -127,7 +130,7 @@ wbt_d8_flow_accumulation(
   out_type = 'area'                   # Output type set to total contributing area, measuring the total upstream flow area
 )
 
-##### Extracting D8 Specific Contributing Area #####
+###### Extracting D8 Specific Contributing Area ######
 # Specific Contributing Area (SCA m²/m)) normalizes CA by flow width, accounting for slope.
 # Calculate the D8 specific contributing area (SCA) from the input DEM
 wbt_d8_flow_accumulation(
@@ -137,8 +140,8 @@ wbt_d8_flow_accumulation(
 )
 
 
-##### Extracting Channels with Different Thresholds #####
-
+##### CREATE TARGET VARIABLE #####
+###### Extracting Channels with Different Thresholds ######
 # Set stream extraction thresholds based on contributing area (CA)
 T1 <- 1000                             # Threshold 1: Minimum contributing area (in m²) to define a stream
 T2 <- 2000                             # Threshold 2: A higher threshold to define streams with larger contributing areas
@@ -150,10 +153,10 @@ wbt_extract_streams(
   './CH_T1.tif',                       # Path to save the output raster with streams extracted using T1
   T1,                                  # Threshold value for contributing area to define streams
   zero_background = FALSE,             # Background values will not be set to zero (optional)
-  wd = NULL,                           # Specify the working directory (optional)
-  verbose_mode = NULL,                 # Enable verbose output for debugging (optional)
-  compress_rasters = NULL,             # Option to compress the output raster file (optional)
-  command_only = FALSE                 # Set to TRUE to return the command as a string without executing it
+  wd = NULL,                           # Change the working directory (optional)
+  verbose_mode = NULL,                 
+  compress_rasters = NULL,             
+  command_only = FALSE                 
 )
 
 # Extract streams using Threshold 2 (T2)
@@ -162,10 +165,10 @@ wbt_extract_streams(
   './CH_T2.tif',                       # Path to save the output raster with streams extracted using T2
   T2,                                  # Threshold value for contributing area to define streams
   zero_background = FALSE,             # Background values will not be set to zero (optional)
-  wd = NULL,                           # Specify the working directory (optional)
-  verbose_mode = NULL,                 # Enable verbose output for debugging (optional)
-  compress_rasters = NULL,             # Option to compress the output raster file (optional)
-  command_only = FALSE                 # Set to TRUE to return the command as a string without executing it
+  wd = NULL,                           # Change the working directory (optional)
+  verbose_mode = NULL,                 
+  compress_rasters = NULL,             
+  command_only = FALSE                 
 )
 
 # Extract streams using Threshold 3 (T3)
@@ -174,29 +177,28 @@ wbt_extract_streams(
   './CH_T3.tif',                       # Path to save the output raster with streams extracted using T3
   T3,                                  # Threshold value for contributing area to define streams
   zero_background = FALSE,             # Background values will not be set to zero (optional)
-  wd = NULL,                           # Specify the working directory (optional)
-  verbose_mode = NULL,                 # Enable verbose output for debugging (optional)
-  compress_rasters = NULL,             # Option to compress the output raster file (optional)
-  command_only = FALSE                 # Set to TRUE to return the command as a string without executing it
+  wd = NULL,                           # Change the working directory (optional)
+  verbose_mode = NULL,                 
+  compress_rasters = NULL,             
+  command_only = FALSE                 
 )
 
-##### Snapping Gully Points Using Different Distances and Channels #####
-
+###### Snapping Gully Points Using Different Distances and Channels ######
 # Set snapping distances (SD) for aligning gully points to the nearest streams
 SD1 <- 4                              # Snapping Distance 1: Snap points within a distance of 4 map units
 SD2 <- 8                              # Snapping Distance 2: Snap points within a distance of 8  map units
 SD3 <- 16                             # Snapping Distance 3: Snap points within a distance of 16  map units
 
-# Snapping gully points to streams using SD1 (distance = 4)
+# Snapping gully points to streams using SD1 
 wbt_jenson_snap_pour_points(
   pour_pts = "./G0.shp",              # Path to the input shapefile of gully points
   streams = './CH_T1.tif',            # Path to the input stream raster (Threshold T1)
   output = "./G1.shp",                # Path to save the output snapped points for T1
-  snap_dist = SD1,                    # Snapping distance set to SD1 (4 units)
-  wd = NULL,                          # Specify the working directory (optional)
-  verbose_mode = NULL,                # Enable verbose output for debugging (optional)
-  compress_rasters = NULL,            # Option to compress the output file (optional)
-  command_only = FALSE                # Set to TRUE to return the command as a string without executing it
+  snap_dist = SD1,                    # Snapping distance set to SD1 
+  wd = NULL,                          
+  verbose_mode = NULL,                
+  compress_rasters = NULL,            
+  command_only = FALSE                
 )
 
 wbt_jenson_snap_pour_points(
@@ -221,12 +223,12 @@ wbt_jenson_snap_pour_points(
   command_only = FALSE
 )
 
-# Snapping gully points to streams using SD2 (distance = 8)
+# Snapping gully points to streams using SD2 
 wbt_jenson_snap_pour_points(
   pour_pts = "./G0.shp",
-  streams = './CH_T1.tif',
+  streams = './CH_T1.tif',            # Use stream raster for Threshold T1
   output = "./G4.shp",                # Output snapped points for T1 using SD2
-  snap_dist = SD2,                    # Snapping distance set to SD2 (8 units)
+  snap_dist = SD2,                    # Snapping distance set to SD2 
   wd = NULL,
   verbose_mode = NULL,
   compress_rasters = NULL,
@@ -255,12 +257,12 @@ wbt_jenson_snap_pour_points(
   command_only = FALSE
 )
 
-# Snapping gully points to streams using SD3 (distance = 16)
+# Snapping gully points to streams using SD3 
 wbt_jenson_snap_pour_points(
   pour_pts = "./G0.shp",
   streams = './CH_T1.tif',
   output = "./G7.shp",                # Output snapped points for T1 using SD3
-  snap_dist = SD3,                    # Snapping distance set to SD3 (16 units)
+  snap_dist = SD3,                    # Snapping distance set to SD3 
   wd = NULL,
   verbose_mode = NULL,
   compress_rasters = NULL,
@@ -289,11 +291,10 @@ wbt_jenson_snap_pour_points(
   command_only = FALSE
 )
 
-##### Create predictor Variables #####
+##### CREATE PREDICTOR VARIABLES #####
 
-##### CA Independent Variables #####
-
-# Extracting slope angle from the filled DEM (using Wang & Liu method)
+###### CA Independent Variables ######
+# Extracting slope angle from the filled DEM 
 wbt_slope(
   '/fill_wang.tif',                    # Input filled DEM 
   './slope_deg.tif',                   # Output raster file for slope angle in degrees
@@ -311,10 +312,10 @@ wbt_plan_curvature(
   './PLANC.tif',                       # Output raster file for plan curvature
   log = FALSE,                         # Optional: Logarithmic transformation (FALSE to skip)
   zfactor = NULL,                      # Optional: Vertical scaling factor (leave NULL for default)
-  wd = NULL,                           # Optional: Working directory
-  verbose_mode = NULL,                 # Optional: Enable verbose output
-  compress_rasters = NULL,             # Optional: Compress the output raster
-  command_only = FALSE                 # Set to TRUE to generate command without execution
+  wd = NULL,                           
+  verbose_mode = NULL,                 
+  compress_rasters = NULL,             
+  command_only = FALSE                 
 )
 
 # Extracting deviation from mean elevation (a measure of local topographic variation)
@@ -323,10 +324,10 @@ wbt_dev_from_mean_elev(
   './dev_mean_ele.tif',                # Output raster file for deviation from mean elevation
   filterx = 11,                        # Filter size in x direction (size of the neighborhood for computation)
   filtery = 11,                        # Filter size in y direction
-  wd = NULL,                           # Optional: Working directory
-  verbose_mode = NULL,                 # Optional: Enable verbose output for debugging
-  compress_rasters = NULL,             # Optional: Compress output raster file
-  command_only = FALSE                 # Set to TRUE to generate the command as a string without execution
+  wd = NULL,                           
+  verbose_mode = NULL,                 
+  compress_rasters = NULL,             
+  command_only = FALSE                 
 )
 
 # Extracting elevation percentile (a statistical measure of local elevation)
@@ -336,10 +337,10 @@ wbt_elev_percentile(
   filterx = 11,                        # Filter size in x direction
   filtery = 11,                        # Filter size in y direction
   sig_digits = 2,                      # Optional: Number of significant digits for output
-  wd = NULL,                           # Optional: Working directory
-  verbose_mode = NULL,                 # Optional: Enable verbose output
-  compress_rasters = NULL,             # Optional: Compress the output raster
-  command_only = FALSE                 # Set to TRUE to return the command as a string without execution
+  wd = NULL,                           
+  verbose_mode = NULL,                 
+  compress_rasters = NULL,             
+  command_only = FALSE                 
 )
 
 # Extracting geomorphons (topographic features or landforms) from the filled DEM
@@ -352,23 +353,22 @@ wbt_geomorphons(
   skip = 0,                            # Optional: Number of classes to skip
   forms = TRUE,                        # Set to TRUE to output geomorphon forms (shapes)
   residuals = FALSE,                   # Set to TRUE to output residuals (optional)
-  wd = NULL,                           # Optional: Working directory
-  verbose_mode = NULL,                 # Optional: Enable verbose output for debugging
-  compress_rasters = NULL,             # Optional: Compress the output raster file
-  command_only = FALSE                 # Set to TRUE to return the command as a string without execution
+  wd = NULL,                           
+  verbose_mode = NULL,                 
+  compress_rasters = NULL,             
+  command_only = FALSE                 
 )
 
-##### CA Dependent Variables #####
-
+###### CA Dependent Variables ######
 # Extracting GORD (D8 pointer) from the filled DEM to calculate flow directions
 wbt_d8_pointer( 
     '/fill_wang.tif',                   # Input filled DEM 
     './pntr.tif',                       # Output raster file for D8 pointer (flow direction map)
     esri_pntr = FALSE,                  # Optional: Set to TRUE for ESRI-style pointers, FALSE for default
-    wd = NULL,                          # Optional: Working directory
-    verbose_mode = NULL,                # Optional: Enable verbose output for debugging
-    compress_rasters = NULL,            # Optional: Compress the output raster
-    command_only = FALSE                # Set to TRUE to generate the command as a string without execution
+    wd = NULL,                          
+    verbose_mode = NULL,                
+    compress_rasters = NULL,            
+    command_only = FALSE                
 )
 
 # Extracting streams using a threshold of 0 from the contributing area raster (CA)
@@ -377,10 +377,10 @@ wbt_extract_streams(
     './CH0m.tif',                       # Output raster for extracted streams with threshold 0
     threshold = 0,                      # Set threshold for stream extraction (0 means all cells are included)
     zero_background = FALSE,            # Set to TRUE to set no data values to zero, FALSE to retain original no data values
-    wd = NULL,                          # Optional: Working directory
-    verbose_mode = NULL,                # Optional: Enable verbose output for debugging
-    compress_rasters = NULL,            # Optional: Compress the output raster
-    command_only = FALSE                # Set to TRUE to return the command only, without execution
+    wd = NULL,                          
+    verbose_mode = NULL,                
+    compress_rasters = NULL,            
+    command_only = FALSE                
 )
 
 # Extracting the Strahler stream order from the flow direction pointers and streams
@@ -390,10 +390,10 @@ wbt_strahler_stream_order(
     './strahler.tif',                   # Output raster for Strahler stream order
     esri_pntr = FALSE,                  # Optional: Set to TRUE for ESRI-style pointers, FALSE for default
     zero_background = FALSE,            # Set to TRUE to assign zero to no data values in the output
-    wd = NULL,                          # Optional: Working directory
-    verbose_mode = NULL,                # Optional: Enable verbose output for debugging
-    compress_rasters = NULL,            # Optional: Compress the output raster
-    command_only = FALSE                # Set to TRUE to return the command only, without execution
+    wd = NULL,                          
+    verbose_mode = NULL,                
+    compress_rasters = NULL,            
+    command_only = FALSE                
 )
 
 # Extracting Stream Power Index (SPI) from the specific contributing area (SCA) and slope rasters
@@ -402,10 +402,10 @@ wbt_stream_power_index(
     './slope_deg.tif',                  # Input raster for slope angle (in degrees)
     './SPI.tif',                        # Output raster for Stream Power Index (SPI)
     exponent = 1,                       # Exponent for SCA (default value is 1)
-    wd = NULL,                          # Optional: Working directory
-    verbose_mode = NULL,                # Optional: Enable verbose output for debugging
-    compress_rasters = NULL,            # Optional: Compress the output raster
-    command_only = FALSE                # Set to TRUE to return the command only, without execution
+    wd = NULL,                          
+    verbose_mode = NULL,                
+    compress_rasters = NULL,            
+    command_only = FALSE                
 )
 
 # Extracting Length Slope Factor (LSF) as part of the Sediment Transport Index (STI)
@@ -415,10 +415,10 @@ wbt_sediment_transport_index(
     './LS.tif',                         # Output raster for Length Slope Factor (LS)
     sca_exponent = 0.4,                 # Exponent for SCA (default value is 0.4)
     slope_exponent = 1.3,               # Exponent for slope (default value is 1.3)
-    wd = NULL,                          # Optional: Working directory
-    verbose_mode = NULL,                # Optional: Enable verbose output for debugging
-    compress_rasters = NULL,            # Optional: Compress the output raster
-    command_only = FALSE                # Set to TRUE to return the command only, without execution
+    wd = NULL,                          
+    verbose_mode = NULL,                
+    compress_rasters = NULL,            
+    command_only = FALSE                
 )
 
 # Extracting Topographic Wetness Index (TWI) based on SCA and slope angle rasters
@@ -426,18 +426,21 @@ wbt_wetness_index(
     './SCA.tif',                        # Input raster for Specific Contributing Area (SCA)
     './slope_deg.tif',                  # Input raster for slope angle (in degrees)
     './TWI.tif',                        # Output raster for Topographic Wetness Index (TWI)
-    wd = NULL,                          # Optional: Working directory
-    verbose_mode = NULL,                # Optional: Enable verbose output for debugging
-    compress_rasters = NULL,            # Optional: Compress the output raster
-    command_only = FALSE                # Set to TRUE to return the command only, without execution
+    wd = NULL,                          
+    verbose_mode = NULL,                
+    compress_rasters = NULL,            
+    command_only = FALSE                
 )
 
 
-##### Dataframe preparation #####
+##### DATAFRAME PREPARATION #####
 
 # loading gully grids
 G0<-rast("./G0.tif")
 
+# Rasterize the vector object using the template raster (G0).
+# The "VALUE" field from the vector data is used to assign values to the raster cells.
+# The output is a raster object with the same resolution, extent, and CRS as G0.
 G1<-vect("./G1.shp")
 G1<-rasterize(G1, field="VALUE",G0)
 G2<-vect("./G2.shp")
@@ -456,7 +459,6 @@ G8<-vect("./G8.shp")
 G8<-rasterize(G8, field="VALUE",G0)
 G9<-vect("./G9.shp")
 G9<-rasterize(G9, field="VALUE",G0)
-
 #set the reference system for all the raster
 crs(G0)<-"EPSG:26914"
 crs(G2)<-"EPSG:26914"
@@ -473,6 +475,7 @@ crs(G9)<-"EPSG:26914"
 CH_T1<-rast("./CH_T1.tif")
 CH_T2<-rast("./CH_T2.tif")
 CH_T3<-rast("./CH_T3.tif")
+#set the reference system for all the raster
 crs(CH_T1)<-"EPSG:26914"
 crs(CH_T2)<-"EPSG:26914"
 crs(CH_T3)<-"EPSG:26914"
@@ -509,14 +512,15 @@ crs(TWI)<-"EPSG:26914"
 LSF<-rast("./LS.tif")
 crs(LSF)<-"EPSG:26914"
 
-# rasters stacking
+# Rasters stacking
 rasters<-c(G0,G1,G2,G3,G4,G5,G6,G7,G8,G9,CH_T1,CH_T2,CH_T3,tiles,ELE,CA,SLO,PLC,DEV,EP,GEO,GORD,SPI,TWI,LSF)
 
-# dataframe creation
+# Convert raster data to a data frame, including x and y coordinates
 data <- as.data.frame(rasters, xy=TRUE)
 colnames(data) <- c("x","y","G0","G1","G2","G3","G4","G5","G6","G7","G8","G9","CH_T1","CH_T2","CH_T3","tiles","ELE","CA","SLO","PLC","DEV","EP","GEO","GORD","SPI","TWI","LSF")
 
-#transform the NA value on zero value
+
+# Transform the NA value on zero value only for target variable and stream network
 data$G0[is.na(data$G0)] = 0
 data$G1[is.na(data$G1)] = 0
 data$G2[is.na(data$G2)] = 0
@@ -531,21 +535,24 @@ data$CH_T1[is.na(data$CH_T1)] = 0
 data$CH_T2[is.na(data$CH_T2)] = 0
 data$CH_T3[is.na(data$CH_T3)] = 0
 
+
 # Convert the values in the 'G0' column to a binary factor with levels "0" and "1"
 # If the value in 'G0' is 0, it becomes "0"; otherwise, it becomes "1"
 data$G0<-factor( ifelse(data$G0 == 0, "0", "1") )
+
 # Repeat the same transformation for each of the following columns (G1 to G9)
 # This will convert each column into a binary factor with levels "0" and "1"
-#data$G1<-factor( ifelse(data$G1 == 0, "0", "1") )
-#data$G2<-factor( ifelse(data$G2 == 0, "0", "1") )
-#data$G3<-factor( ifelse(data$G3 == 0, "0", "1") )
-#data$G4<-factor( ifelse(data$G4 == 0, "0", "1") )
-#data$G5<-factor( ifelse(data$G5 == 0, "0", "1") )
-#data$G6<-factor( ifelse(data$G6 == 0, "0", "1") )
-#data$G7<-factor( ifelse(data$G7 == 0, "0", "1") )
-#data$G8<-factor( ifelse(data$G8 == 0, "0", "1") )
-#data$G9<-factor( ifelse(data$G9 == 0, "0", "1") )
+data$G1<-factor( ifelse(data$G1 == 0, "0", "1") )
+data$G2<-factor( ifelse(data$G2 == 0, "0", "1") )
+data$G3<-factor( ifelse(data$G3 == 0, "0", "1") )
+data$G4<-factor( ifelse(data$G4 == 0, "0", "1") )
+data$G5<-factor( ifelse(data$G5 == 0, "0", "1") )
+data$G6<-factor( ifelse(data$G6 == 0, "0", "1") )
+data$G7<-factor( ifelse(data$G7 == 0, "0", "1") )
+data$G8<-factor( ifelse(data$G8 == 0, "0", "1") )
+data$G9<-factor( ifelse(data$G9 == 0, "0", "1") )
 
+# Convert these columns to a factor variables, indicating it's categorical data.
 data$CH_T1<-as.factor(data$CH_T1)
 data$CH_T2<-as.factor(data$CH_T2)
 data$CH_T3<-as.factor(data$CH_T3)
@@ -561,7 +568,7 @@ data<-droplevels(data)
 setDT(data)
 
 # Create the new column 'CA_threshold'
-# the new column stores the 'CA' values associated with the maximum 'ELE' for each group in G0, G1, ..., G9
+# the new column stores the 'CA' values associated with the maximum elevation 'ELE' for each group in G0, G1, ..., G9
 data[, G0_CA_threshold := CA[which.max(ELE)], by = G0]
 data[, G1_CA_threshold := CA[which.max(ELE)], by = G1]
 data[, G2_CA_threshold := CA[which.max(ELE)], by = G2]
@@ -598,20 +605,22 @@ data$G7<-factor( ifelse(data$G7 != 0 & data$CH_T1 == 1, "1", "0") )
 data$G8<-factor( ifelse(data$G8 != 0 & data$CH_T2 == 1, "1", "0") )
 data$G9<-factor( ifelse(data$G9 != 0 & data$CH_T3 == 1, "1", "0") )
 
+# Save the data frame created
+save(data, file = "data.RData")
 
-#### PRELIMINARY DATA ANALYSIS  ####
-
+#### PRELIMINARY INPUT DATA ANALYSIS  ####
 #set path as working directory
-setwd("D:/GRAZIA/PHD/TURKEY/R")
+setwd("D:/GRAZIA/script/TURKEY/R")
 
 # load data #
-load("D:/GRAZIA/PHD/TURKEY/R/data.RData")
+load("./data.RData")
 
 
 ##### Stratified Sampling for the Mann-Whitney-Wilcoxon Test and Spineplots  ######
 
 # Initialize empty lists for storing stratified samples for each group (G0 to G9)
 sample_G0<-NULL
+
 # Loop 10 times to perform stratified sampling on the data
 # Perform stratified sampling on the 'G0' variable, selecting 50% of rows where G0 == 1
 # Store the result in the list 'sample_G0' at index 'i'
@@ -619,7 +628,7 @@ for (i in 1:10){
   sample_G0[[i]]<-stratified(data, "G0",.5*nrow(data[which(data$G0==1),]))
 }
 
-# Combine all 10 stratified samples into a single data frame
+# Combine all 10 stratified samples from the list into a single data frame
 sample_G0<-do.call("rbind", sample_G0)
 
 # Repeat the same process for other groups (G1 to G9)
@@ -679,7 +688,7 @@ for (i in 1:10){
 sample_G9<-do.call("rbind", sample_G9)
 
 
-##### Mann-Whitney-Wilcoxon Test #####
+###### Mann-Whitney-Wilcoxon Test ######
 # Split the stratified samples into 'presence' and 'absence' groups for each variable
 # 'presence' represents rows where the group variable equals 1
 # 'absence' represents rows where the group variable equals 0
@@ -786,9 +795,9 @@ wilcox.test(presence_G9$SPI,absence_G9$SPI, paired=FALSE)
 wilcox.test(presence_G9$TWI,absence_G9$TWI, paired=FALSE)
 wilcox.test(presence_G9$LSF,absence_G9$LSF, paired=FALSE)
 
-##### Spineplots #####
+###### Conditional density plots ######
 # Set the working directory for saving the figures
-setwd("D:/GRAZIA/PHD/TURKEY/R/figures")
+setwd("D:/GRAZIA/script/TURKEY/R/figures")
 
 # Save spineplots as a PDF
 pdf("spineplots.pdf",width=14, height=17)
@@ -798,7 +807,7 @@ par(mfrow=c(9,4))
 par(mar = c(3.5, 2.5, 0.8, 2.5))
 par(mgp=c(2,0.75,0))
 
-# Generate spineplots for each variable and group
+# Generate spineplots for each variable but only for sample G0, G1, G5, G9
 spineplot(G0 ~ SLO, sample_G0, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G0$SLO))
 text(0.06,0.9,substitute(paste(bold("SLO"))),cex=1)
 spineplot(G1 ~ SLO, sample_G1, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G1$SLO))
@@ -893,9 +902,10 @@ text(0.06,0.9,substitute(paste(bold("LSF"))),cex=1)
 
 dev.off()
 
-##### VIF calculation #####
+###### Variance inflation factor (VIF) ######
 
 data_vif <- data[,c(19,20,21,22,25:27)]  # Select columns 19, 20, 21, 22, and 25 to 27 as predictor variables.
+                                         
 
 target <- as.factor(data$G0)             # Convert the 'G0' column into a factor to create the target variable.
 
@@ -909,10 +919,9 @@ vif_values <- vif(model)                 # Calculate the Variance Inflation Fact
 print(vif_values)                        # Print the VIF values to identify highly collinear predictors.
 
 
-
-
 #### MARS MODELLING ####
 # Define the formulas for the models
+# Predictor set A: only variables not accounting for contributing area
 formula_MAG0 <- G0 ~ ELE+SLO+GEO+PLC+DEV+EP
 formula_MAG1 <- G1 ~ ELE+SLO+GEO+PLC+DEV+EP
 formula_MAG2 <- G2 ~ ELE+SLO+GEO+PLC+DEV+EP
@@ -923,7 +932,7 @@ formula_MAG6 <- G6 ~ ELE+SLO+GEO+PLC+DEV+EP
 formula_MAG7 <- G7 ~ ELE+SLO+GEO+PLC+DEV+EP
 formula_MAG8 <- G8 ~ ELE+SLO+GEO+PLC+DEV+EP
 formula_MAG9 <- G9 ~ ELE+SLO+GEO+PLC+DEV+EP
-
+# Predictor set B: all variables including the variables influenced by the contributing area 
 formula_MBG0 <- G0 ~ ELE+SLO+GEO+PLC+DEV+EP+SPI+TWI+LSF+GORD
 formula_MBG1 <- G1 ~ ELE+SLO+GEO+PLC+DEV+EP+SPI+TWI+LSF+GORD
 formula_MBG2 <- G2 ~ ELE+SLO+GEO+PLC+DEV+EP+SPI+TWI+LSF+GORD
@@ -936,7 +945,6 @@ formula_MBG8 <- G8 ~ ELE+SLO+GEO+PLC+DEV+EP+SPI+TWI+LSF+GORD
 formula_MBG9 <- G9 ~ ELE+SLO+GEO+PLC+DEV+EP+SPI+TWI+LSF+GORD
 
 ##### Initialize Variables for the MAG0 Model #####
-
 MAG0 <- NULL           # Initialize the MAG0 model variable as NULL.
 training_set <- NULL   # Initialize the training dataset variable as NULL.
 testing_set <- NULL    # Initialize the testing dataset variable as NULL.
@@ -952,7 +960,7 @@ set.seed(123)          # Set the seed for random number generation to ensure rep
 # Loop to perform cross-validation across 5 iterations.
 for (i in 1:5) {
   
-  # Generate 5 folds for cross-validation.
+  # Tiles random subdivisions into 5 folds
   # The `fold` function divides the dataset into 5 folds based on the 'tiles' column using a distance-based method.
   df_folded <- fold(
     data = data,
@@ -1024,7 +1032,7 @@ for (i in 1:5) {
   }
 }
 
-##### Final Results for the MAG0 Model #####
+# Final Results for the MAG0 Model #
 # Combine AUC values from all iterations into a single vector for analysis.
 auc_MAG0 <- unlist(auc_MAG0)
 # Combine Kappa values from all iterations into a single vector for analysis.
@@ -1032,7 +1040,6 @@ kappa_MAG0 <- unlist(kappa_MAG0)
 
 
 ##### Initialize Variables for the MAG1 Model #####
-
 MAG1<-NULL             
 training_set<-NULL
 testing_set<-NULL
@@ -1090,8 +1097,8 @@ for (i in 1:5){
 auc_MAG1<-unlist(auc_MAG1)
 kappa_MAG1<-unlist(kappa_MAG1)
 
-##### Initialize Variables for the MAG2 Model #####
 
+##### Initialize Variables for the MAG2 Model #####
 MAG2<-NULL
 
 training_set<-NULL
@@ -1102,6 +1109,10 @@ kappa_MAG2<-NULL
 
 set.seed(123)
 
+library(groupdata2) 
+library(splitstackshape) 
+library(earth) 
+library(caret) 
 
 for (i in 1:5){
   df_folded <- fold(
@@ -1151,7 +1162,6 @@ auc_MAG2<-unlist(auc_MAG2)
 kappa_MAG2<-unlist(kappa_MAG2)
 
 ##### Initialize Variables for the MAG3 Model #####
-
 MAG3<-NULL
 
 training_set<-NULL
@@ -1161,7 +1171,6 @@ auc_MAG3<-NULL
 kappa_MAG3<-NULL
 
 set.seed(123)
-
 
 
 for (i in 1:5){
@@ -1212,7 +1221,6 @@ auc_MAG3<-unlist(auc_MAG3)
 kappa_MAG3<-unlist(kappa_MAG3)
 
 ##### Initialize Variables for the MAG4 Model #####
-
 MAG4<-NULL
 
 training_set<-NULL
@@ -1273,7 +1281,6 @@ auc_MAG4<-unlist(auc_MAG4)
 kappa_MAG4<-unlist(kappa_MAG4)
 
 ##### Initialize Variables for the MAG5 Model #####
-
 MAG5<-NULL
 
 training_set<-NULL
@@ -1333,7 +1340,6 @@ auc_MAG5<-unlist(auc_MAG5)
 kappa_MAG5<-unlist(kappa_MAG5)
 
 ##### Initialize Variables for the MAG6 Model #####
-
 MAG6<-NULL
 
 training_set<-NULL
@@ -1393,7 +1399,6 @@ auc_MAG6<-unlist(auc_MAG6)
 kappa_MAG6<-unlist(kappa_MAG6)
 
 ##### Initialize Variables for the MAG7 Model #####
-
 MAG7<-NULL
 
 training_set<-NULL
@@ -1453,7 +1458,6 @@ auc_MAG7<-unlist(auc_MAG7)
 kappa_MAG7<-unlist(kappa_MAG7)
 
 ##### Initialize Variables for the MAG8 Model #####
-
 MAG8<-NULL
 
 training_set<-NULL
@@ -1514,7 +1518,6 @@ auc_MAG8<-unlist(auc_MAG8)
 kappa_MAG8<-unlist(kappa_MAG8)
 
 ##### Initialize Variables for the MAG9 Model #####
-
 MAG9<-NULL
 
 training_set<-NULL
@@ -1575,7 +1578,6 @@ kappa_MAG9<-unlist(kappa_MAG9)
 
 
 ##### Initialize Variables for the MBG0 Model #####
-
 MBG0<-NULL
 
 training_set<-NULL
@@ -1634,8 +1636,8 @@ for (i in 1:5){
 auc_MBG0<-unlist(auc_MBG0)
 kappa_MBG0<-unlist(kappa_MBG0)
 
-##### Initialize Variables for the MBG1 Model #####
 
+##### Initialize Variables for the MBG1 Model #####
 MBG1<-NULL
 
 training_set<-NULL
@@ -1694,8 +1696,8 @@ for (i in 1:5){
 auc_MBG1<-unlist(auc_MBG1)
 kappa_MBG1<-unlist(kappa_MBG1)
 
-##### Initialize Variables for the MBG2 Model #####
 
+##### Initialize Variables for the MBG2 Model #####
 MBG2<-NULL
 
 training_set<-NULL
@@ -1754,8 +1756,8 @@ for (i in 1:5){
 auc_MBG2<-unlist(auc_MBG2)
 kappa_MBG2<-unlist(kappa_MBG2)
 
-##### Initialize Variables for the MBG3 Model #####
 
+##### Initialize Variables for the MBG3 Model #####
 MBG3<-NULL
 
 training_set<-NULL
@@ -1814,8 +1816,8 @@ for (i in 1:5){
 auc_MBG3<-unlist(auc_MBG3)
 kappa_MBG3<-unlist(kappa_MBG3)
 
-##### Initialize Variables for the MBG4 Model #####
 
+##### Initialize Variables for the MBG4 Model #####
 MBG4<-NULL
 
 training_set<-NULL
@@ -1874,8 +1876,8 @@ for (i in 1:5){
 auc_MBG4<-unlist(auc_MBG4)
 kappa_MBG4<-unlist(kappa_MBG4)
 
-##### Initialize Variables for the MBG5 Model #####
 
+##### Initialize Variables for the MBG5 Model #####
 MBG5<-NULL
 
 training_set<-NULL
@@ -1935,7 +1937,6 @@ auc_MBG5<-unlist(auc_MBG5)
 kappa_MBG5<-unlist(kappa_MBG5)
 
 ##### Initialize Variables for the MBG6 Model #####
-
 MBG6<-NULL
 
 training_set<-NULL
@@ -1995,7 +1996,6 @@ auc_MBG6<-unlist(auc_MBG6)
 kappa_MBG6<-unlist(kappa_MBG6)
 
 ##### Initialize Variables for the MBG7 Model #####
-
 MBG7<-NULL
 
 training_set<-NULL
@@ -2055,7 +2055,6 @@ auc_MBG7<-unlist(auc_MBG7)
 kappa_MBG7<-unlist(kappa_MBG7)
 
 ##### Initialize Variables for the MBG8 Model #####
-
 MBG8<-NULL
 
 training_set<-NULL
@@ -2115,7 +2114,6 @@ auc_MBG8<-unlist(auc_MBG8)
 kappa_MBG8<-unlist(kappa_MBG8)
 
 ##### Initialize Variables for the MBG9 Model #####
-
 MBG9<-NULL
 
 training_set<-NULL
@@ -2174,8 +2172,7 @@ for (i in 1:5){
 auc_MBG9<-unlist(auc_MBG9)
 kappa_MBG9<-unlist(kappa_MBG9)
 
-#### Models performance statistics ####
-
+#### Quantitative model performance evalutation ####
 kappa <-data.frame("MAG0"=as.vector(kappa_MAG0),
                    "MAG1"=as.vector(kappa_MAG1),
                    "MAG2"=as.vector(kappa_MAG2),
