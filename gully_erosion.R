@@ -3,7 +3,7 @@
 
 # Author details: Christian Conoscenti, Grazia Azzara, Aleksey Y. Sheshukov
 
-# Script and data info: This script performs the Pixel-scale Gully Erosion Susceptibility  (Conoscenti et al, 2025) 
+# Script and data info: This script performs the Pixel-scale Gully Erosion Susceptibility  (Conoscenti et al., 2025) 
 
 # Copyright statement: This script is the product of the work of Christian Conoscenti, Grazia Azzara, Aleksey Y. Sheshukov
 
