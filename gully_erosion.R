@@ -1,10 +1,11 @@
-# Title: 
 
-# Author details: 
+# Title: Pixel-scale Gully Erosion Susceptibility: Predictive Modeling with R using Gully Inventory Consistent with Terrain Variables
 
-# Script and data info: This script performs the  (XXX et al.,) 
+# Author details: Christian Conoscenti, Grazia Azzara, Aleksey Y. Sheshukov
 
-# Copyright statement: This script is the product of the work of 
+# Script and data info: This script performs the Pixel-scale Gully Erosion Susceptibility  (Conoscenti et al, 2025) 
+
+# Copyright statement: This script is the product of the work of Christian Conoscenti, Grazia Azzara, Aleksey Y. Sheshukov
 
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
 # INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. 
@@ -43,17 +44,17 @@ library(pROC)
 ###################################################################################################################
 
 # Set working directory to your location
-wd <- ("D:/GRAZIA/script/TURKEY/R")
+wd <- ("D:/GRAZIA/script/TURKEY/data_script_github")
 setwd(wd)
 
 #### DATASETS ####
-# Ensure the working directory contains the following files: 
-# the DEM, the Study Area vector, and the Gully vector.
+# Ensure that the working directory contains the following files: 
+# DEM (raster), Study Area (vector-polygon), and Gully (vector-polyline).
 
 ##### Upload DEM #####
 # resampling 
 wbt_resample(
-  input='./lidar_USDA_clip.tif',       # Path to the input raster file
+  input='./lidar_clip.tif',            # Path to the input raster file
   output='./dem_4m.tif',               # Path to save the output resampled raster
   cell_size = 4,                       # Desired cell size for the output raster 
   method = "bilinear",                 # Resampling method: 'nn' (nearest neighbor), 'bilinear', or 'cc' (cubic convolution)
@@ -64,7 +65,7 @@ wbt_resample(
 )
 
 
-##### Upload the vector of the Study Area  #####
+##### Upload vector file of the Study Area  #####
 # convert to raster
 wbt_vector_polygons_to_raster(
   input="./tiles.shp",                 # Path to the input shapefile containing vector polygons
@@ -111,7 +112,7 @@ wbt_raster_to_vector_points(
 ###### Fill depression - Wang & Liu ######
 wbt_fill_depressions_wang_and_liu(
   dem='./dem_4m.tif',                  # Path to the input DEM raster file
-  output='/fill_wang.tif',            # Path to save the output DEM with depressions filled
+  output='./fill_wang.tif',            # Path to save the output DEM with depressions filled
   fix_flats = TRUE,                   # Optional flag indicating whether flat areas should have a small gradient applied 
   flat_increment = NULL,              # Specify the elevation increment for flat areas (optional, uses default if not set)
   wd = NULL,                          # Change the working directory (optional)
@@ -122,19 +123,19 @@ wbt_fill_depressions_wang_and_liu(
 
 
 ###### Extracting D8 Contributing Area ######
-# Contributing Area (CA m²) represents the total upstream area contributing flow to a point. 
-# Calculate the D8 contributing area (CA) from the input DEM
+# Contributing Area (CA m²) represents total upstream area contributing to the overland flow to a point. 
+# Calculate D8 contributing area (CA) from the input DEM
 wbt_d8_flow_accumulation(
-  input = '/fill_wang.tif',           # Path to the input filled DEM raster file
+  input = './fill_wang.tif',           # Path to the input filled DEM raster file
   output = './CA.tif',                # Path to save the output raster showing the total contributing area
-  out_type = 'area'                   # Output type set to total contributing area, measuring the total upstream flow area
+  out_type = 'area'                   # Output type set to total contributing area, measuring total upstream flow area
 )
 
 ###### Extracting D8 Specific Contributing Area ######
 # Specific Contributing Area (SCA m²/m)) normalizes CA by flow width, accounting for slope.
 # Calculate the D8 specific contributing area (SCA) from the input DEM
 wbt_d8_flow_accumulation(
-  input = '/fill_wang.tif',               # Path to the input filled DEM raster file
+  input = './fill_wang.tif',               # Path to the input filled DEM raster file
   output = './SCA.tif',                   # Path to save the output raster showing the specific contributing area
   out_type = 'Specific Contributing Area' # Output type set to specific contributing area, measuring flow per unit width
 )
@@ -143,16 +144,17 @@ wbt_d8_flow_accumulation(
 ##### CREATE TARGET VARIABLE #####
 ###### Extracting Channels with Different Thresholds ######
 # Set stream extraction thresholds based on contributing area (CA)
-T1 <- 1000                             # Threshold 1: Minimum contributing area (in m²) to define a stream
-T2 <- 2000                             # Threshold 2: A higher threshold to define streams with larger contributing areas
-T3 <- 5000                             # Threshold 3: An even larger threshold for major streams
+# Specify three thresholds in m² for small, medium, and larger streams
+T1 <- 1000                             # Threshold 1: Minimum contributing area (in m²) to define small channelized streams
+T2 <- 2000                             # Threshold 2: Medium-size contributing area (in m²) to define larger intermittent streams
+T3 <- 5000                             # Threshold 3: Large contributing area (in m²) to define permanent streams
 
 # Extract streams using Threshold 1 (T1)
 wbt_extract_streams(
   './CA.tif',                          # Path to the input Contributing Area (CA) raster file
-  './CH_T1.tif',                       # Path to save the output raster with streams extracted using T1
+  './CH_T1.tif',                       # Path to the output raster with streams extracted using T1
   T1,                                  # Threshold value for contributing area to define streams
-  zero_background = FALSE,             # Background values will not be set to zero (optional)
+  zero_background = FALSE,             # Background values not set to zero (optional)
   wd = NULL,                           # Change the working directory (optional)
   verbose_mode = NULL,                 
   compress_rasters = NULL,             
@@ -162,9 +164,9 @@ wbt_extract_streams(
 # Extract streams using Threshold 2 (T2)
 wbt_extract_streams(
   './CA.tif',                          # Path to the input Contributing Area (CA) raster file
-  './CH_T2.tif',                       # Path to save the output raster with streams extracted using T2
+  './CH_T2.tif',                       # Path to the output raster with streams extracted using T2
   T2,                                  # Threshold value for contributing area to define streams
-  zero_background = FALSE,             # Background values will not be set to zero (optional)
+  zero_background = FALSE,             # Background values not set to zero (optional)
   wd = NULL,                           # Change the working directory (optional)
   verbose_mode = NULL,                 
   compress_rasters = NULL,             
@@ -174,9 +176,9 @@ wbt_extract_streams(
 # Extract streams using Threshold 3 (T3)
 wbt_extract_streams(
   './CA.tif',                          # Path to the input Contributing Area (CA) raster file
-  './CH_T3.tif',                       # Path to save the output raster with streams extracted using T3
+  './CH_T3.tif',                       # Path to the output raster with streams extracted using T3
   T3,                                  # Threshold value for contributing area to define streams
-  zero_background = FALSE,             # Background values will not be set to zero (optional)
+  zero_background = FALSE,             # Background values not set to zero (optional)
   wd = NULL,                           # Change the working directory (optional)
   verbose_mode = NULL,                 
   compress_rasters = NULL,             
@@ -184,16 +186,16 @@ wbt_extract_streams(
 )
 
 ###### Snapping Gully Points Using Different Distances and Channels ######
-# Set snapping distances (SD) for aligning gully points to the nearest streams
+# Set three snapping distances (SD) to align gully points with the nearest streams
 SD1 <- 4                              # Snapping Distance 1: Snap points within a distance of 4 map units
-SD2 <- 8                              # Snapping Distance 2: Snap points within a distance of 8  map units
-SD3 <- 16                             # Snapping Distance 3: Snap points within a distance of 16  map units
+SD2 <- 8                              # Snapping Distance 2: Snap points within a distance of 8 map units
+SD3 <- 16                             # Snapping Distance 3: Snap points within a distance of 16 map units
 
 # Snapping gully points to streams using SD1 
 wbt_jenson_snap_pour_points(
   pour_pts = "./G0.shp",              # Path to the input shapefile of gully points
   streams = './CH_T1.tif',            # Path to the input stream raster (Threshold T1)
-  output = "./G1.shp",                # Path to save the output snapped points for T1
+  output = "./G1.shp",                # Path to the output snapped points for T1
   snap_dist = SD1,                    # Snapping distance set to SD1 
   wd = NULL,                          
   verbose_mode = NULL,                
@@ -204,7 +206,7 @@ wbt_jenson_snap_pour_points(
 wbt_jenson_snap_pour_points(
   pour_pts = "./G0.shp",
   streams = './CH_T2.tif',            # Use stream raster for Threshold T2
-  output = "./G2.shp",                # Output snapped points for T2
+  output = "./G2.shp",                # Path to the output snapped points for T2
   snap_dist = SD1,
   wd = NULL,
   verbose_mode = NULL,
@@ -215,7 +217,7 @@ wbt_jenson_snap_pour_points(
 wbt_jenson_snap_pour_points(
   pour_pts = "./G0.shp",
   streams = './CH_T3.tif',            # Use stream raster for Threshold T3
-  output = "./G3.shp",                # Output snapped points for T3
+  output = "./G3.shp",                # Path to the output snapped points for T3
   snap_dist = SD1,
   wd = NULL,
   verbose_mode = NULL,
@@ -296,7 +298,7 @@ wbt_jenson_snap_pour_points(
 ###### CA Independent Variables ######
 # Extracting slope angle from the filled DEM 
 wbt_slope(
-  '/fill_wang.tif',                    # Input filled DEM 
+  './fill_wang.tif',                   # Input filled DEM 
   './slope_deg.tif',                   # Output raster file for slope angle in degrees
   zfactor = NULL,                      # Optional: Vertical scaling factor (leave NULL to use default)
   units = "degrees",                   # Specify units for slope angle (degrees)
@@ -308,7 +310,7 @@ wbt_slope(
 
 # Extracting plan curvature from the filled DEM
 wbt_plan_curvature( 
-  '/fill_wang.tif',                    # Input filled DEM 
+  './fill_wang.tif',                   # Input filled DEM 
   './PLANC.tif',                       # Output raster file for plan curvature
   log = FALSE,                         # Optional: Logarithmic transformation (FALSE to skip)
   zfactor = NULL,                      # Optional: Vertical scaling factor (leave NULL for default)
@@ -320,7 +322,7 @@ wbt_plan_curvature(
 
 # Extracting deviation from mean elevation (a measure of local topographic variation)
 wbt_dev_from_mean_elev(
-  '/fill_wang.tif',                    # Input filled DEM 
+  './fill_wang.tif',                   # Input filled DEM 
   './dev_mean_ele.tif',                # Output raster file for deviation from mean elevation
   filterx = 11,                        # Filter size in x direction (size of the neighborhood for computation)
   filtery = 11,                        # Filter size in y direction
@@ -332,7 +334,7 @@ wbt_dev_from_mean_elev(
 
 # Extracting elevation percentile (a statistical measure of local elevation)
 wbt_elev_percentile(
-  '/fill_wang.tif',                    # Input filled DEM 
+  './fill_wang.tif',                   # Input filled DEM 
   './elev_perc.tif',                   # Output raster file for elevation percentile
   filterx = 11,                        # Filter size in x direction
   filtery = 11,                        # Filter size in y direction
@@ -345,7 +347,7 @@ wbt_elev_percentile(
 
 # Extracting geomorphons (topographic features or landforms) from the filled DEM
 wbt_geomorphons( 
-  '/fill_wang.tif',                    # Input filled DEM 
+  './fill_wang.tif',                   # Input filled DEM 
   './geomorphons.tif',                 # Output raster file for geomorphons
   search = 50,                         # Search radius for geomorphon calculation
   threshold = 0,                       # Threshold for form classification
@@ -362,74 +364,74 @@ wbt_geomorphons(
 ###### CA Dependent Variables ######
 # Extracting GORD (D8 pointer) from the filled DEM to calculate flow directions
 wbt_d8_pointer( 
-    '/fill_wang.tif',                   # Input filled DEM 
-    './pntr.tif',                       # Output raster file for D8 pointer (flow direction map)
-    esri_pntr = FALSE,                  # Optional: Set to TRUE for ESRI-style pointers, FALSE for default
-    wd = NULL,                          
-    verbose_mode = NULL,                
-    compress_rasters = NULL,            
-    command_only = FALSE                
+  './fill_wang.tif',                  # Input filled DEM 
+  './pntr.tif',                       # Output raster file for D8 pointer (flow direction map)
+  esri_pntr = FALSE,                  # Optional: Set to TRUE for ESRI-style pointers, FALSE for default
+  wd = NULL,                          
+  verbose_mode = NULL,                
+  compress_rasters = NULL,            
+  command_only = FALSE                
 )
 
 # Extracting streams using a threshold of 0 from the contributing area raster (CA)
 wbt_extract_streams( 
-    './CA.tif',                         # Input contributing area (CA) raster
-    './CH0m.tif',                       # Output raster for extracted streams with threshold 0
-    threshold = 0,                      # Set threshold for stream extraction (0 means all cells are included)
-    zero_background = FALSE,            # Set to TRUE to set no data values to zero, FALSE to retain original no data values
-    wd = NULL,                          
-    verbose_mode = NULL,                
-    compress_rasters = NULL,            
-    command_only = FALSE                
+  './CA.tif',                         # Input contributing area (CA) raster
+  './CH0m.tif',                       # Output raster for extracted streams with threshold 0
+  threshold = 0,                      # Set threshold for stream extraction (0 means all cells are included)
+  zero_background = FALSE,            # Set to TRUE to set no data values to zero, FALSE to retain original no data values
+  wd = NULL,                          
+  verbose_mode = NULL,                
+  compress_rasters = NULL,            
+  command_only = FALSE                
 )
 
 # Extracting the Strahler stream order from the flow direction pointers and streams
 wbt_strahler_stream_order( 
-    './pntr.tif',                       # Input D8 flow direction pointer raster
-    './CH0m.tif',                       # Input stream raster (from the previous step)
-    './strahler.tif',                   # Output raster for Strahler stream order
-    esri_pntr = FALSE,                  # Optional: Set to TRUE for ESRI-style pointers, FALSE for default
-    zero_background = FALSE,            # Set to TRUE to assign zero to no data values in the output
-    wd = NULL,                          
-    verbose_mode = NULL,                
-    compress_rasters = NULL,            
-    command_only = FALSE                
+  './pntr.tif',                       # Input D8 flow direction pointer raster
+  './CH0m.tif',                       # Input stream raster (from the previous step)
+  './strahler.tif',                   # Output raster for Strahler stream order
+  esri_pntr = FALSE,                  # Optional: Set to TRUE for ESRI-style pointers, FALSE for default
+  zero_background = FALSE,            # Set to TRUE to assign zero to no data values in the output
+  wd = NULL,                          
+  verbose_mode = NULL,                
+  compress_rasters = NULL,            
+  command_only = FALSE                
 )
 
 # Extracting Stream Power Index (SPI) from the specific contributing area (SCA) and slope rasters
 wbt_stream_power_index(
-    './SCA.tif',                        # Input raster for Specific Contributing Area (SCA)
-    './slope_deg.tif',                  # Input raster for slope angle (in degrees)
-    './SPI.tif',                        # Output raster for Stream Power Index (SPI)
-    exponent = 1,                       # Exponent for SCA (default value is 1)
-    wd = NULL,                          
-    verbose_mode = NULL,                
-    compress_rasters = NULL,            
-    command_only = FALSE                
+  './SCA.tif',                        # Input raster for Specific Contributing Area (SCA)
+  './slope_deg.tif',                  # Input raster for slope angle (in degrees)
+  './SPI.tif',                        # Output raster for Stream Power Index (SPI)
+  exponent = 1,                       # Exponent for SCA (default value is 1)
+  wd = NULL,                          
+  verbose_mode = NULL,                
+  compress_rasters = NULL,            
+  command_only = FALSE                
 )
 
 # Extracting Length Slope Factor (LSF) as part of the Sediment Transport Index (STI)
 wbt_sediment_transport_index(
-    './SCA.tif',                        # Input raster for Specific Contributing Area (SCA)
-    './slope_deg.tif',                  # Input raster for slope angle (in degrees)
-    './LS.tif',                         # Output raster for Length Slope Factor (LS)
-    sca_exponent = 0.4,                 # Exponent for SCA (default value is 0.4)
-    slope_exponent = 1.3,               # Exponent for slope (default value is 1.3)
-    wd = NULL,                          
-    verbose_mode = NULL,                
-    compress_rasters = NULL,            
-    command_only = FALSE                
+  './SCA.tif',                        # Input raster for Specific Contributing Area (SCA)
+  './slope_deg.tif',                  # Input raster for slope angle (in degrees)
+  './LS.tif',                         # Output raster for Length Slope Factor (LS)
+  sca_exponent = 0.4,                 # Exponent for SCA (default value is 0.4)
+  slope_exponent = 1.3,               # Exponent for slope (default value is 1.3)
+  wd = NULL,                          
+  verbose_mode = NULL,                
+  compress_rasters = NULL,            
+  command_only = FALSE                
 )
 
 # Extracting Topographic Wetness Index (TWI) based on SCA and slope angle rasters
 wbt_wetness_index( 
-    './SCA.tif',                        # Input raster for Specific Contributing Area (SCA)
-    './slope_deg.tif',                  # Input raster for slope angle (in degrees)
-    './TWI.tif',                        # Output raster for Topographic Wetness Index (TWI)
-    wd = NULL,                          
-    verbose_mode = NULL,                
-    compress_rasters = NULL,            
-    command_only = FALSE                
+  './SCA.tif',                        # Input raster for Specific Contributing Area (SCA)
+  './slope_deg.tif',                  # Input raster for slope angle (in degrees)
+  './TWI.tif',                        # Output raster for Topographic Wetness Index (TWI)
+  wd = NULL,                          
+  verbose_mode = NULL,                
+  compress_rasters = NULL,            
+  command_only = FALSE                
 )
 
 
@@ -439,8 +441,8 @@ wbt_wetness_index(
 G0<-rast("./G0.tif")
 
 # Rasterize the vector object using the template raster (G0).
-# The "VALUE" field from the vector data is used to assign values to the raster cells.
-# The output is a raster object with the same resolution, extent, and CRS as G0.
+# The "VALUE" field from the vector data is used to assign values to raster cells.
+# The output is a raster object with the same resolution, extent, and CRS is set the same as G0.
 G1<-vect("./G1.shp")
 G1<-rasterize(G1, field="VALUE",G0)
 G2<-vect("./G2.shp")
@@ -459,7 +461,7 @@ G8<-vect("./G8.shp")
 G8<-rasterize(G8, field="VALUE",G0)
 G9<-vect("./G9.shp")
 G9<-rasterize(G9, field="VALUE",G0)
-#set the reference system for all the raster
+#set the reference system for all rasters
 crs(G0)<-"EPSG:26914"
 crs(G2)<-"EPSG:26914"
 crs(G1)<-"EPSG:26914"
@@ -471,11 +473,11 @@ crs(G7)<-"EPSG:26914"
 crs(G8)<-"EPSG:26914"
 crs(G9)<-"EPSG:26914"
 
-# loading channels rasters
+# loading channel rasters
 CH_T1<-rast("./CH_T1.tif")
 CH_T2<-rast("./CH_T2.tif")
 CH_T3<-rast("./CH_T3.tif")
-#set the reference system for all the raster
+#set the reference system for all rasters
 crs(CH_T1)<-"EPSG:26914"
 crs(CH_T2)<-"EPSG:26914"
 crs(CH_T3)<-"EPSG:26914"
@@ -492,7 +494,7 @@ crs(ELE)<-"EPSG:26914"
 CA<-rast("./CA.tif")
 crs(CA)<-"EPSG:26914"
 
-# loading predictors rasters
+# loading predictor set rasters
 SLO<-rast("./slope_deg.tif")
 crs(SLO)<-"EPSG:26914"
 PLC<-rast("./PLANC.tif")
@@ -515,12 +517,12 @@ crs(LSF)<-"EPSG:26914"
 # Rasters stacking
 rasters<-c(G0,G1,G2,G3,G4,G5,G6,G7,G8,G9,CH_T1,CH_T2,CH_T3,tiles,ELE,CA,SLO,PLC,DEV,EP,GEO,GORD,SPI,TWI,LSF)
 
-# Convert raster data to a data frame, including x and y coordinates
+# Convert raster data to the data frame, including x and y coordinates
 data <- as.data.frame(rasters, xy=TRUE)
 colnames(data) <- c("x","y","G0","G1","G2","G3","G4","G5","G6","G7","G8","G9","CH_T1","CH_T2","CH_T3","tiles","ELE","CA","SLO","PLC","DEV","EP","GEO","GORD","SPI","TWI","LSF")
 
 
-# Transform the NA value on zero value only for target variable and stream network
+# Transform the NA value to zero only for target variable and stream network
 data$G0[is.na(data$G0)] = 0
 data$G1[is.na(data$G1)] = 0
 data$G2[is.na(data$G2)] = 0
@@ -536,7 +538,7 @@ data$CH_T2[is.na(data$CH_T2)] = 0
 data$CH_T3[is.na(data$CH_T3)] = 0
 
 
-# Convert the values in the 'G0' column to a binary factor with levels "0" and "1"
+# Convert values in the 'G0' column to a binary factor with levels "0" and "1"
 # If the value in 'G0' is 0, it becomes "0"; otherwise, it becomes "1"
 data$G0<-factor( ifelse(data$G0 == 0, "0", "1") )
 
@@ -552,7 +554,7 @@ data$G7<-factor( ifelse(data$G7 == 0, "0", "1") )
 data$G8<-factor( ifelse(data$G8 == 0, "0", "1") )
 data$G9<-factor( ifelse(data$G9 == 0, "0", "1") )
 
-# Convert these columns to a factor variables, indicating it's categorical data.
+# Convert these columns to a factor variable
 data$CH_T1<-as.factor(data$CH_T1)
 data$CH_T2<-as.factor(data$CH_T2)
 data$CH_T3<-as.factor(data$CH_T3)
@@ -564,7 +566,7 @@ data<-na.omit(data)
 # Drop unused levels from all factor variables in the data frame 'data'
 data<-droplevels(data)
 
-# Convert your existing dataframe to a data.table
+# Convert your existing data frame to a data.table
 setDT(data)
 
 # Create the new column 'CA_threshold'
@@ -581,7 +583,7 @@ data[, G8_CA_threshold := CA[which.max(ELE)], by = G8]
 data[, G9_CA_threshold := CA[which.max(ELE)], by = G9]
 
 # Transform each column G0, G1, G2, ..., G9 into a binary factor with levels '1' and '0'
-# Set to '1' if the value of the column G0, G1, G2,..., G9 is not 0 and CA is greater than or equal to the threshold G0_CA, otherwise '0'
+# Set to '1' if the value of the column G0, G1, G2,..., G9 is not 0 and CA is greater than or equal to the threshold G0_CA, otherwise set to '0'
 data$G0<-factor( ifelse(data$G0 != 0 & data$CA>=data$G0_CA_threshold, "1", "0") )
 data$G1<-factor( ifelse(data$G1 != 0 & data$CA>=data$G1_CA_threshold, "1", "0") )
 data$G2<-factor( ifelse(data$G2 != 0 & data$CA>=data$G2_CA_threshold, "1", "0") )
@@ -605,23 +607,13 @@ data$G7<-factor( ifelse(data$G7 != 0 & data$CH_T1 == 1, "1", "0") )
 data$G8<-factor( ifelse(data$G8 != 0 & data$CH_T2 == 1, "1", "0") )
 data$G9<-factor( ifelse(data$G9 != 0 & data$CH_T3 == 1, "1", "0") )
 
-# Save the data frame created
-save(data, file = "data.RData")
-
-#### PRELIMINARY INPUT DATA ANALYSIS  ####
-#set path as working directory
-setwd("D:/GRAZIA/script/TURKEY/R")
-
-# load data #
-load("./data.RData")
-
 
 ##### Stratified Sampling for the Mann-Whitney-Wilcoxon Test and Spineplots  ######
 
 # Initialize empty lists for storing stratified samples for each group (G0 to G9)
 sample_G0<-NULL
 
-# Loop 10 times to perform stratified sampling on the data
+# Loop 10 times to perform stratified sampling of the data
 # Perform stratified sampling on the 'G0' variable, selecting 50% of rows where G0 == 1
 # Store the result in the list 'sample_G0' at index 'i'
 for (i in 1:10){
@@ -631,7 +623,7 @@ for (i in 1:10){
 # Combine all 10 stratified samples from the list into a single data frame
 sample_G0<-do.call("rbind", sample_G0)
 
-# Repeat the same process for other groups (G1 to G9)
+# Repeat the same process for the other groups (G1 to G9)
 # This process ensures that we create balanced stratified samples for each group
 sample_G1<-NULL
 for (i in 1:10){
@@ -795,117 +787,12 @@ wilcox.test(presence_G9$SPI,absence_G9$SPI, paired=FALSE)
 wilcox.test(presence_G9$TWI,absence_G9$TWI, paired=FALSE)
 wilcox.test(presence_G9$LSF,absence_G9$LSF, paired=FALSE)
 
-###### Conditional density plots ######
-# Set the working directory for saving the figures
-setwd("D:/GRAZIA/script/TURKEY/R/figures")
 
-# Save spineplots as a PDF
-pdf("spineplots.pdf",width=14, height=17)
-
-# Adjust graphical parameters for multi-panel layout
-par(mfrow=c(9,4))
-par(mar = c(3.5, 2.5, 0.8, 2.5))
-par(mgp=c(2,0.75,0))
-
-# Generate spineplots for each variable but only for sample G0, G1, G5, G9
-spineplot(G0 ~ SLO, sample_G0, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G0$SLO))
-text(0.06,0.9,substitute(paste(bold("SLO"))),cex=1)
-spineplot(G1 ~ SLO, sample_G1, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G1$SLO))
-text(0.06,0.9,substitute(paste(bold("SLO"))),cex=1)
-spineplot(G5 ~ SLO, sample_G5, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G5$SLO))
-text(0.06,0.9,substitute(paste(bold("SLO"))),cex=1)
-spineplot(G9 ~ SLO, sample_G9, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G9$SLO))
-text(0.06,0.9,substitute(paste(bold("SLO"))),cex=1)
-
-
-spineplot(G0 ~ PLC, sample_G0, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G0$PLC))
-text(0.06,0.9,substitute(paste(bold("PLC"))),cex=1)
-spineplot(G1 ~ PLC, sample_G1, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G1$PLC))
-text(0.06,0.9,substitute(paste(bold("PLC"))),cex=1)
-spineplot(G5 ~ PLC, sample_G5, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G5$PLC))
-text(0.06,0.9,substitute(paste(bold("PLC"))),cex=1)
-spineplot(G9 ~ PLC, sample_G9, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G9$PLC))
-text(0.06,0.9,substitute(paste(bold("PLC"))),cex=1)
-
-
-spineplot(G0 ~ DEV, sample_G0, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G0$DEV))
-text(0.06,0.9,substitute(paste(bold("DEV"))),cex=1)
-spineplot(G1 ~ DEV, sample_G1, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G1$DEV))
-text(0.06,0.9,substitute(paste(bold("DEV"))),cex=1)
-spineplot(G5 ~ DEV, sample_G5, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G5$DEV))
-text(0.06,0.9,substitute(paste(bold("DEV"))),cex=1)
-spineplot(G9 ~ DEV, sample_G9, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G9$DEV))
-text(0.06,0.9,substitute(paste(bold("DEV"))),cex=1)
-
-
-spineplot(G0 ~ EP, sample_G0, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G0$EP))
-text(0.06,0.95,substitute(paste(bold("EP"))),cex=1)
-spineplot(G1 ~ EP, sample_G1, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G1$EP))
-text(0.06,0.95,substitute(paste(bold("EP"))),cex=1)
-spineplot(G5 ~ EP, sample_G5, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G5$EP))
-text(0.06,0.95,substitute(paste(bold("EP"))),cex=1)
-spineplot(G9 ~ EP, sample_G9, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G9$EP))
-text(0.06,0.95,substitute(paste(bold("EP"))),cex=1)
-
-
-spineplot(G0 ~ GEO, sample_G0, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="")
-text(0.175,0.90,substitute(paste(bold("GEO"))),cex=1)
-spineplot(G1 ~ GEO, sample_G1, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="")
-text(0.175,0.90,substitute(paste(bold("GEO"))),cex=1)
-spineplot(G5 ~ GEO, sample_G5, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="")
-text(0.175,0.90,substitute(paste(bold("GEO"))),cex=1)
-spineplot(G9 ~ GEO, sample_G9, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="")
-text(0.175,0.90,substitute(paste(bold("GEO"))),cex=1)
-
-
-spineplot(G0 ~ GORD, sample_G0, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",
-          breaks = c(1,2,3,4,5,6,10))
-text(0.1,0.90,substitute(paste(bold("GORD"))),cex=1)
-spineplot(G1 ~ GORD, sample_G1, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",
-          breaks = c(1,2,3,4,5,6,10))
-text(0.1,0.90,substitute(paste(bold("GORD"))),cex=1)
-spineplot(G5 ~ GORD, sample_G5, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",
-          breaks = c(1,2,3,4,5,6,10))
-text(0.1,0.90,substitute(paste(bold("GORD"))),cex=1)
-spineplot(G9 ~ GORD, sample_G9, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",
-          breaks = c(1,2,3,4,5,6,10))
-text(0.1,0.90,substitute(paste(bold("GORD"))),cex=1)
-
-
-spineplot(G0 ~ SPI, sample_G0, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G0$SPI))
-text(0.06,0.90,substitute(paste(bold("SPI"))),cex=1)
-spineplot(G1 ~ SPI, sample_G1, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G1$SPI))
-text(0.06,0.90,substitute(paste(bold("SPI"))),cex=1)
-spineplot(G5 ~ SPI, sample_G5, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G5$SPI))
-text(0.06,0.90,substitute(paste(bold("SPI"))),cex=1)
-spineplot(G9 ~ SPI, sample_G9, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G9$SPI))
-text(0.06,0.90,substitute(paste(bold("SPI"))),cex=1)
-
-
-spineplot(G0 ~ TWI, sample_G0, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G0$TWI))
-text(0.06,0.90,substitute(paste(bold("TWI"))),cex=1)
-spineplot(G1 ~ TWI, sample_G1, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G1$TWI))
-text(0.06,0.90,substitute(paste(bold("TWI"))),cex=1)
-spineplot(G5 ~ TWI, sample_G5, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G5$TWI))
-text(0.06,0.90,substitute(paste(bold("TWI"))),cex=1)
-spineplot(G9 ~ TWI, sample_G9, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G9$TWI))
-text(0.06,0.90,substitute(paste(bold("TWI"))),cex=1)
-
-spineplot(G0 ~ LSF, sample_G0, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G0$LSF))
-text(0.06,0.9,substitute(paste(bold("LSF"))),cex=1)
-spineplot(G1 ~ LSF, sample_G1, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G1$LSF))
-text(0.06,0.9,substitute(paste(bold("LSF"))),cex=1)
-spineplot(G5 ~ LSF, sample_G5, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G5$LSF))
-text(0.06,0.9,substitute(paste(bold("LSF"))),cex=1)
-spineplot(G9 ~ LSF, sample_G9, col=c("#2c7fb8","#edf8b1"),xlab="", ylab="",xaxlabels =c("0%","25%","50%","75%","100%"),breaks = quantile(sample_G9$LSF))
-text(0.06,0.9,substitute(paste(bold("LSF"))),cex=1)
-
-dev.off()
 
 ###### Variance inflation factor (VIF) ######
 
 data_vif <- data[,c(19,20,21,22,25:27)]  # Select columns 19, 20, 21, 22, and 25 to 27 as predictor variables.
-                                         
+
 
 target <- as.factor(data$G0)             # Convert the 'G0' column into a factor to create the target variable.
 
@@ -914,14 +801,14 @@ model <- glm(target ~ .,                 # Fit a logistic regression model with 
              family = binomial)          # Specify logistic regression using 'family = binomial'.
 
 vif_values <- vif(model)                 # Calculate the Variance Inflation Factor (VIF) for multicollinearity assessment.
-                                         # High VIF values (e.g., > 5 or > 10) indicate strong multicollinearity and may warrant further investigation.
+# High VIF values (e.g., > 5 or > 10) indicate strong multicollinearity and may warrant further investigation.
 
-print(vif_values)                        # Print the VIF values to identify highly collinear predictors.
+print(vif_values)                        # Print VIF values to identify highly collinear predictors.
 
 
 #### MARS MODELLING ####
 # Define the formulas for the models
-# Predictor set A: only variables not accounting for contributing area
+# Predictor set A: only variables that do not account for contributing area
 formula_MAG0 <- G0 ~ ELE+SLO+GEO+PLC+DEV+EP
 formula_MAG1 <- G1 ~ ELE+SLO+GEO+PLC+DEV+EP
 formula_MAG2 <- G2 ~ ELE+SLO+GEO+PLC+DEV+EP
@@ -976,7 +863,7 @@ for (i in 1:5) {
   data_f3 <- df_folded[which(df_folded$.folds == "3"), ]
   data_f4 <- df_folded[which(df_folded$.folds == "4"), ]
   data_f5 <- df_folded[which(df_folded$.folds == "5"), ]
-
+  
   # Stratify the data in each fold based on the target variable 'G0'.
   # Ensures balanced representation of class "1" samples in the dataset.
   sample_f1 <- stratified(data_f1, "G0",
@@ -992,20 +879,20 @@ for (i in 1:5) {
   
   # Combine the stratified samples from all 5 folds into a single dataset for this iteration.
   dataf[[i]] <- rbind(sample_f1, sample_f2, sample_f3, sample_f4, sample_f5)
-
+  
   # Initialize AUC and Kappa metrics matrices for the current iteration.
   auc_MAG0[[i]] <- matrix(nrow = 1, ncol = 5)
   kappa_MAG0[[i]] <- matrix(nrow = 1, ncol = 5)
   
   ## Loop Over Each Fold ##
-
+  
   for (fold in 1:5) {
     # Split the dataset into training and testing sets.
     # Training data includes all folds except the current fold.
     training_set <- dataf[[i]][dataf[[i]]$.folds != fold, ]
     # Testing data is the current fold.
     testing_set <- dataf[[i]][dataf[[i]]$.folds == fold, ]
-
+    
     # Train the MAG0 Model using the Earth Algorithm (MARS).
     # The Earth algorithm is a regression-based method. It is configured for logistic regression (binomial family).
     MAG0[[fold]] <- earth(formula_MAG0, data = training_set, degree = 1, trace = 1, glm = list(family = binomial))
@@ -1029,8 +916,8 @@ for (i in 1:5) {
     # Store the Kappa Statistic.
     # Kappa measures the agreement between predictions and true labels, adjusted for chance agreement.
     kappa_MAG0[[i]][, fold] <- conf_MAG0[["overall"]][["Kappa"]]
-  }
-}
+  } # end of fold loop
+} # end of cross-validation loop 
 
 # Final Results for the MAG0 Model #
 # Combine AUC values from all iterations into a single vector for analysis.
@@ -1231,8 +1118,6 @@ kappa_MAG4<-NULL
 
 set.seed(123)
 
-
-
 for (i in 1:5){
   df_folded <- fold(
     data = data,
@@ -1290,7 +1175,6 @@ auc_MAG5<-NULL
 kappa_MAG5<-NULL
 
 set.seed(123)
-
 
 for (i in 1:5){
   df_folded <- fold(
@@ -1350,7 +1234,6 @@ kappa_MAG6<-NULL
 
 set.seed(123)
 
-
 for (i in 1:5){
   df_folded <- fold(
     data = data,
@@ -1408,7 +1291,6 @@ auc_MAG7<-NULL
 kappa_MAG7<-NULL
 
 set.seed(123)
-
 
 for (i in 1:5){
   df_folded <- fold(
@@ -2172,7 +2054,8 @@ for (i in 1:5){
 auc_MBG9<-unlist(auc_MBG9)
 kappa_MBG9<-unlist(kappa_MBG9)
 
-#### Quantitative model performance evalutation ####
+
+#### Quantitative model performance evaluation ####
 kappa <-data.frame("MAG0"=as.vector(kappa_MAG0),
                    "MAG1"=as.vector(kappa_MAG1),
                    "MAG2"=as.vector(kappa_MAG2),
@@ -2218,48 +2101,23 @@ AUC <-data.frame("MAG0"=as.vector(auc_MAG0),
 
 #### Susceptibility map ####
 
-load("~/Library/CloudStorage/OneDrive-UNIPA/Papers/turkey2023/data/data.RData")
-
-sample_G0<-NULL
-for (i in 1:10){
-  sample_G0[[i]]<-stratified(data, "G0",.5*nrow(data[which(data$G0==1),]))
-}
-sample_G0<-do.call("rbind", sample_G0)
-
-sample_G3<-NULL
-for (i in 1:10){
-  sample_G3[[i]]<-stratified(data, "G3",.5*nrow(data[which(data$G3==1),]))
-}
-sample_G3<-do.call("rbind", sample_G3)
-
 sample_G6<-NULL
 for (i in 1:10){
   sample_G6[[i]]<-stratified(data, "G6",.5*nrow(data[which(data$G6==1),]))
 }
 sample_G6<-do.call("rbind", sample_G6)
 
-sample_G9<-NULL
-for (i in 1:10){
-  sample_G9[[i]]<-stratified(data, "G9",.5*nrow(data[which(data$G9==1),]))
-}
-sample_G9<-do.call("rbind", sample_G9)
-
 
 MBG6<- earth(G6 ~ ELE+SLO+GEO+PLC+DEV+EP+SPI+TWI+LSF+GORD, data=sample_G6, degree=1, trace=1, glm=list(family=binomial))
 
-#data$score<-predict(MBG6, data, type="response")
-#auc_data <- as.vector(auc(data$G6,data$score))
-#data$pred_MBG6<-factor( ifelse(data$score < 0.5, "0", "1") )
-#conf_data <- confusionMatrix(data$pred_MBG6,data$G6, positive="1")
-#kappa_data<-conf_data[["overall"]][["Kappa"]]
+data$score<-predict(MBG6, data, type="response")
 
-library(raster)
+
 score <- rasterFromXYZ(data[,c("x","y","score")])  
 crs(score)<-"EPSG:26914"
 
 writeRaster(score,
-            file="/Users/christian/Library/CloudStorage/OneDrive-UNIPA/Papers/turkey2023/data/score",filetype="GTiff", overwrite=TRUE, NAflag=-99999)
-
+            file="./score.tif",filetype="GTiff", overwrite=TRUE, NAflag=-99999)
 
 
 
