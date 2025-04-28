@@ -1,8 +1,8 @@
-# Pixel-scale Gully Erosion Susceptibility: Predictive Modeling with R using Gully Inventory Consistent with Terrain Variables
+# Gully Erosion Susceptibility Modeling with R 
 
 ### Authors  
+### LINK OF THE PAPER - REFERENCE 
 **Christian Conoscenti**, **Grazia Azzara**, **Aleksey Y. Sheshukov**
-
 ---
 
 ### Description  
