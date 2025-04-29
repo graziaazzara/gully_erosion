@@ -6,10 +6,12 @@
 ---
 
 ### Description  
-This repository contains the script and data for pixel-scale gully erosion susceptibility modeling. 
-The methodology integrates gully inventory data with terrain variables to predict erosion susceptibility at a pixel scale.
+This repository contains the script for pixel-scale gully erosion susceptibility modeling. It is designed to be reproducible and adaptable to any region where a reliable gully inventory and an accurate DEM are available.
 
-The modeling framework was implemented in **R**, an open-source programming language, and leverages geospatial and statistical analysis packages.  
+The script automates the snapping of gully trajectories to DEM-derived flow lines using two user-defined parameters: maximum snap distance (SD) and contributing area threshold (CA). The user can set three different values for each parameter (SD1, SD2, SD3 and CA1, CA2, CA3) and adapt the approach to the specific characteristics of their study area.
+
+
+The modeling framework was implemented in **R**, an open-source programming language, and uses geospatial and statistical analysis packages.  
 
 ### **Dependencies**  
 The script was developed using R (R Core Team, 2023). To run the script, you need:  
@@ -28,7 +30,7 @@ The script was developed using R (R Core Team, 2023). To run the script, you nee
 
 ### **Input Data Requirements**  
 The script requires the following inputs:  
-1. **Area Boundary**: Shapefile of the study area boundary.  
+1. **Study Area**: Shapefile (.shp) of the study area, subdivided into 20 spatially tiles. Each tile is a portion of the study area where gullies have been mapped.
 2. **DEM (Digital Elevation Model)**: Raster file of the study area.  
 3. **Gully Inventory**: Shapefile containing gully trajectory data.  
 
