@@ -6,14 +6,12 @@
 ---
 
 ### Description  
-This repository contains the script for pixel-scale gully erosion susceptibility modeling. It is designed to be reproducible and adaptable to any region where a reliable gully inventory and an accurate DEM are available.
+This repository contains the script for pixel-scale gully erosion susceptibility modelling. It is designed to be reproducible and adaptable to any region with a reliable gully inventory and an accurate DEM.
 
 The script automates the snapping of gully trajectories to DEM-derived flow lines using two user-defined parameters: maximum snap distance (SD) and contributing area threshold (CA). The user can set three different values for each parameter (SD1, SD2, SD3 and CA1, CA2, CA3) and adapt the approach to the specific characteristics of their study area.
 
-Before running the susceptibility modeling,  the study area must be divided into spatially disjoint subareas. These subareas corresponded to the 20 tiles where gully presence/absence has been consistently mapped.
+Before running the susceptibility modelling,  the study area must be divided into spatially disjoint subareas. These subareas corresponded to the 20 tiles where gully presence/absence has been consistently mapped.
 The spatial partitioning into 20 tiles is crucial because the script performs a 5-fold spatial cross-validation, where in each iteration, 4 tiles are used for testing and the remaining 16 tiles for model calibration. Balanced random samples of gully and non-gully pixels are extracted separately from the training and testing tiles at each fold.
-
-The modeling framework was implemented in **R**, an open-source programming language, and uses geospatial and statistical analysis packages.  
 
 ### **Dependencies**  
 The script was developed using R (R Core Team, 2023). To run the script, you need:  
