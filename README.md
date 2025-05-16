@@ -1,7 +1,5 @@
 # Gully Erosion Susceptibility Modeling with R 
 
-### Authors  
-### LINK OF THE PAPER - REFERENCE 
 **Christian Conoscenti**, **Grazia Azzara**, **Aleksey Y. Sheshukov**
 ---
 
@@ -14,7 +12,7 @@ Before running the script on susceptibility modelling,  the study area must be d
 The spatial partitioning into 20 tiles is crucial because the script performs a 5-fold spatial cross-validation, where in each iteration, 4 tiles are used for testing and the remaining 16 tiles are used for model calibration. Balanced random samples of gully and non-gully pixels are extracted separately from the training and testing tiles at each fold.
 
 ### **Reference**
-Conoscenti, C., G. Azzara, A.Y. Sheshukov. (2025) Pixel-scale Gully Erosion Susceptibility: Predictive Modeling with R using Gully Inventory Consistent with Terrain Variables. _Catena_. (doi TBD).
+Conoscenti, C., G. Azzara, A.Y. Sheshukov. (2025) Pixel-scale Gully Erosion Susceptibility: Predictive Modeling with R using Gully Inventory Consistent with Terrain Variables. _Catena_. 
 
 ### **Dependencies**  
 The script was developed using R (R Core Team, 2023). To run the script, you need:  
