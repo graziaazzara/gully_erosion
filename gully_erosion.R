@@ -3,7 +3,7 @@
 
 # Author details: Christian Conoscenti, Grazia Azzara, Aleksey Y. Sheshukov
 
-# Script and data info: This script performs the Pixel-scale Gully Erosion Susceptibility  (Conoscenti et al., 2025) 
+# Script and data info: This script performs the Pixel-scale Gully Erosion Susceptibility  (C. Conoscenti et al., 2025) 
 
 # Copyright statement: This script is the product of the work of Christian Conoscenti, Grazia Azzara, Aleksey Y. Sheshukov
 
@@ -44,7 +44,7 @@ library(pROC)
 ###################################################################################################################
 
 # Set working directory to your location
-wd <- ("D:/GRAZIA/script/TURKEY/data_script_github")
+wd <- ("D:/")
 setwd(wd)
 
 #### DATASETS ####
@@ -72,8 +72,8 @@ wbt_vector_polygons_to_raster(
   output="./tiles.tif",                # Path to save the output raster file
   field = "OBJECTID",                  # Attribute field from the shapefile to be rasterized
   nodata = TRUE,                       # Enable NoData values for areas without polygons; default is 0.0 if not set
-  cell_size = NULL,                    # Define the resolution of the raster; uses the base raster if not specified
-  base = "./dem_4m.tif",               # Path to a base raster file for spatial reference and resolution
+  cell_size = NULL,                    
+  base = "./dem_4m.tif",               
   wd = NULL,                           
   verbose_mode = NULL,                 
   compress_rasters = NULL,            
@@ -88,9 +88,9 @@ wbt_vector_lines_to_raster(
   input="./G0_linear.shp",            # Path to the input shapefile containing gully lines
   output="./G0.tif",                  # Path to save the output raster file
   field = "IDN",                      # Attribute field to use for rasterization
-  nodata = TRUE,                      # Enable NoData values for cells with no corresponding vector data
-  cell_size = NULL,                   # Specify the resolution of the raster; uses the base raster if not specified
-  base = "./dem_4m.tif",              # Path to a base raster file for spatial reference and resolution
+  nodata = TRUE,                      
+  cell_size = NULL,                   
+  base = "./dem_4m.tif",              
   wd = NULL,                          
   verbose_mode = NULL,                
   compress_rasters = NULL,            
@@ -2100,22 +2100,17 @@ AUC <-data.frame("MAG0"=as.vector(auc_MAG0),
 
 
 #### Susceptibility map ####
-
 sample_G6<-NULL
 for (i in 1:10){
   sample_G6[[i]]<-stratified(data, "G6",.5*nrow(data[which(data$G6==1),]))
 }
 sample_G6<-do.call("rbind", sample_G6)
 
-
 MBG6<- earth(G6 ~ ELE+SLO+GEO+PLC+DEV+EP+SPI+TWI+LSF+GORD, data=sample_G6, degree=1, trace=1, glm=list(family=binomial))
-
 data$score<-predict(MBG6, data, type="response")
-
 
 score <- rasterFromXYZ(data[,c("x","y","score")])  
 crs(score)<-"EPSG:26914"
-
 writeRaster(score,
             file="./score.tif",filetype="GTiff", overwrite=TRUE, NAflag=-99999)
 
